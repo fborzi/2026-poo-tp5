@@ -1,0 +1,179 @@
+name: Java Code Compliance
+
+on:
+  push:
+    branches: [ main, master, "feature/*", "**" ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  evaluacion:
+    name: Compilación y Compliance
+    runs-on: ubuntu-latest
+
+    env:
+      JAVA_VERSION: '25'
+      CHECKSTYLE_VERSION: '10.21.4'
+
+    steps:
+      # 1. Checkout del código del alumno
+      - name: Checkout student code
+        uses: actions/checkout@v4
+
+      # 2. Checkout del repositorio privado de tests y reglas (2026-poo-tests)
+      - name: Checkout private tests & rules
+        uses: actions/checkout@v4
+        continue-on-error: true
+        with:
+          repository: fborzi/2026-poo-tests
+          ssh-key: ${{ secrets.TESTS_DEPLOY_KEY }}
+          path: private-tests-repo
+          sparse-checkout: |
+            shared
+
+      # 3. Configurar JDK con caché de Maven
+      - name: Configurar Java ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: 'maven'
+
+      # 4. Compilar proyecto (mvn clean install sin tests unitarios)
+      - name: Compilar proyecto (mvn clean install)
+        id: compile
+        run: mvn -B clean install -DskipTests
+
+      # 5. Cache de Checkstyle CLI autónomo
+      - name: Cache Checkstyle CLI
+        id: cache-checkstyle
+        uses: actions/cache@v4
+        with:
+          path: ~/.checkstyle
+          key: checkstyle-cli-${{ env.CHECKSTYLE_VERSION }}
+
+      # 6. Descargar Checkstyle CLI si no está en cache
+      - name: Descargar Checkstyle CLI
+        if: steps.cache-checkstyle.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/.checkstyle
+          curl -sSL -o ~/.checkstyle/checkstyle.jar https://github.com/checkstyle/checkstyle/releases/download/checkstyle-${{ env.CHECKSTYLE_VERSION }}/checkstyle-${{ env.CHECKSTYLE_VERSION }}-all.jar
+
+      # 7. Ejecutar Checkstyle con reglas de private-tests-repo (o local de fallback)
+      - name: Ejecutar Checkstyle
+        id: checkstyle
+        if: always()
+        run: |
+          CONFIG_FILE="private-tests-repo/shared/checkstyle.xml"
+          if [ ! -f "$CONFIG_FILE" ]; then
+            if [ -f "checkstyle.xml" ]; then
+              CONFIG_FILE="checkstyle.xml"
+            elif [ -f "shared/checkstyle.xml" ]; then
+              CONFIG_FILE="shared/checkstyle.xml"
+            else
+              echo "No se encontró archivo de configuración de Checkstyle."
+              exit 0
+            fi
+          fi
+
+          if [ ! -d "src" ]; then
+            echo "No se encontró el directorio src/ para auditar."
+            exit 0
+          fi
+
+          echo "Ejecutando Checkstyle con: $CONFIG_FILE"
+          java -jar ~/.checkstyle/checkstyle.jar -c "$CONFIG_FILE" -f xml -o checkstyle-report.xml src/ || true
+
+      # 8. Publicar Reporte Completo en GitHub Step Summary
+      - name: Publicar reporte en Summary
+        if: always()
+        run: |
+          SUMMARY="$GITHUB_STEP_SUMMARY"
+
+          echo "# ☕ Evaluación de Código Java" >> "$SUMMARY"
+          echo "" >> "$SUMMARY"
+          echo "- **Commit:** \`${{ github.sha }}\`" >> "$SUMMARY"
+          echo "- **Autor:** \`${{ github.actor }}\`" >> "$SUMMARY"
+          echo "- **Rama:** \`${{ github.ref_name }}\`" >> "$SUMMARY"
+          echo "- **Ejecución:** [Ver logs del run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> "$SUMMARY"
+          echo "" >> "$SUMMARY"
+
+          #### COMPILACIÓN ####
+          echo "## 🛠️ Compilación (Maven)" >> "$SUMMARY"
+          echo "" >> "$SUMMARY"
+          if [ "${{ steps.compile.outcome }}" = "success" ]; then
+            echo "- Estado: **Compilación Exitosa** ✅" >> "$SUMMARY"
+            echo "> El proyecto compila correctamente con \`mvn clean install -DskipTests\`." >> "$SUMMARY"
+          else
+            echo "- Estado: **Compilación Fallida** ❌" >> "$SUMMARY"
+            echo "> Ocurrió un error al compilar el proyecto. Revisá la pestaña de logs del step anterior para corregir los errores de sintaxis o dependencias." >> "$SUMMARY"
+          fi
+          echo "" >> "$SUMMARY"
+
+          #### COMPLIANCE / CHECKSTYLE ####
+          echo "## 📏 Estilo de Código y Buenas Prácticas (Checkstyle)" >> "$SUMMARY"
+          echo "" >> "$SUMMARY"
+
+          if [ ! -f checkstyle-report.xml ]; then
+            echo "_No se generó el reporte de Checkstyle (verifique si existe el directorio \`src/\`)._" >> "$SUMMARY"
+          else
+            python3 - << 'EOF' >> "$SUMMARY"
+          import os
+          import sys
+          import xml.etree.ElementTree as ET
+
+          report_file = "checkstyle-report.xml"
+
+          try:
+              tree = ET.parse(report_file)
+              root = tree.getroot()
+          except Exception as e:
+              print(f"Error procesando reporte de Checkstyle: {e}")
+              sys.exit(0)
+
+          violations = []
+          for file_elem in root.findall("file"):
+              file_path = file_elem.get("name", "")
+              rel_path = os.path.relpath(file_path, os.getcwd()) if os.path.isabs(file_path) else file_path
+              for error in file_elem.findall("error"):
+                  line = error.get("line", "1")
+                  col = error.get("column", "1")
+                  severity = error.get("severity", "warning")
+                  message = error.get("message", "")
+                  source = error.get("source", "")
+                  check_name = source.split(".")[-1]
+                  violations.append({
+                      "file": rel_path,
+                      "line": line,
+                      "col": col,
+                      "severity": severity,
+                      "message": message,
+                      "check": check_name
+                  })
+
+          # Emitir anotaciones nativas de GitHub en stderr para que resalten en el PR/commit
+          for v in violations:
+              level = "error" if v["severity"] == "error" else "warning"
+              print(f"::{level} file={v['file']},line={v['line']},col={v['col']}::[{v['check']}] {v['message']}", file=sys.stderr)
+
+          if not violations:
+              print("Sin observaciones. Cumple con todas las normas de estilo. ✅\n")
+          else:
+              print(f"Se detectaron **{len(violations)}** observaciones de estilo. ⚠️\n")
+              print("| Archivo | Línea | Regla | Mensaje |")
+              print("| :--- | :---: | :--- | :--- |")
+              for v in violations[:40]:
+                  f_name = os.path.basename(v["file"])
+                  print(f"| `{f_name}` | {v['line']} | `{v['check']}` | {v['message']} |")
+              if len(violations) > 40:
+                  print(f"\n*(Mostrando 40 de {len(violations)} observaciones. Revisá las anotaciones del commit para ver todas)*\n")
+          EOF
+          fi
+
+      # 9. Fallar el job si la compilación no fue exitosa
+      - name: Validar resultado de compilación
+        if: steps.compile.outcome != 'success'
+        run: |
+          echo "La compilación del proyecto falló."
+          exit 1
