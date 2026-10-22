@@ -2,17 +2,19 @@ package com.francoborzi.modulos.ejercicio2502;
 
 public class Main {
     static void main() {
-        final Perro perro = new Perro("Dana");
-        final Gato gato = new Gato("Jack");
-        final Lechuza lechuza = new Lechuza("Hedwig");
+        DrDolittle doctor = new DrDolittle();
+
+        Perro perro = new Perro("Dana");
+        Gato gato = new Gato("Jack");
+        Lechuza lechuza = new Lechuza("Hedwig");
 
         System.out.println("--- hacerHablar (solo animales) ---");
-        DrDolittle.hacerHablar(perro);
-        DrDolittle.hacerHablar(gato);
-        DrDolittle.hacerHablar(lechuza);
+        doctor.hacerHablar(perro);
+        doctor.hacerHablar(gato);
+        doctor.hacerHablar(lechuza);
 
         System.out.println("--- hacerHablar2 (cualquier sonido) ---");
-        final Hablador[] habladores = {
+        Hablador[] habladores = {
                 perro,
                 gato,
                 lechuza,
@@ -20,8 +22,8 @@ public class Main {
                 new Alarma(),
                 new RelojCucu()
         };
-        for (final Hablador hablador : habladores) {
-            DrDolittle.hacerHablar2(hablador);
+        for (Hablador hablador : habladores) {
+            doctor.hacerHablar2(hablador);
         }
     }
 }
