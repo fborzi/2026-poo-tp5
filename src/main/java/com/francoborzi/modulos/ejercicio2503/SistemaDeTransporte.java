@@ -24,7 +24,16 @@ public class SistemaDeTransporte {
         return null;
     }
 
+    public Double mostrarColectivoConMayorKilometraje(){
+        Double mayorKilometraje=0.0;
+        for (int i = 0; i < choferes.size(); i++) {
+            if (choferes.get(i).getUnidadAsignada().getKilometraje() > mayorKilometraje) {
+                mayorKilometraje = choferes.get(i).getUnidadAsignada().getKilometraje();
+            }
 
+        }
+        return mayorKilometraje;
+    }
 
     public List<Chofer> getChoferes() {
         return choferes;
