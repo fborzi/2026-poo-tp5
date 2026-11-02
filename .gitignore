@@ -40,3 +40,10 @@ build/
 
 ### tests
 #src/test/
+
+.env
+*.env
+
+.idea/
+exports/
+var/
