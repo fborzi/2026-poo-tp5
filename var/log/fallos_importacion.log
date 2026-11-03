@@ -1,0 +1,12 @@
+[2026-11-03T18:47:38.225807200Z] | [LINEA 2] | [Conflicto de base de datos: Violación de indice de Unicidad ó Clave primaria: "PUBLIC.CONSTRAINT_INDEX_6 ON PUBLIC.PRODUCTOS(CODIGO_SKU NULLS FIRST) VALUES ( /* 1 */ 'SKU-100' )"
+Unique index or primary key violation: "PUBLIC.CONSTRAINT_INDEX_6 ON PUBLIC.PRODUCTOS(CODIGO_SKU NULLS FIRST) VALUES ( /* 1 */ 'SKU-100' )"; SQL statement:
+INSERT INTO productos (codigo_sku, descripcion, precio_unitario, stock_disponible) VALUES (?, ?, ?, ?) [23505-232]]
+[2026-11-03T18:49:40.120699100Z] | [LINEA 3] | [Formato numérico inválido en precio o stock]
+[2026-11-03T18:49:40.157096200Z] | [LINEA 3] | [Formato numérico inválido en precio o stock]
+[2026-11-03T18:50:02.558306700Z] | [LINEA 4] | [Precio o stock negativo]
+[2026-11-03T18:50:02.571850Z] | [LINEA 4] | [Precio o stock negativo]
+[2026-11-03T18:50:33.881623800Z] | [LINEA 5] | [Cantidad de columnas incorrecta: se esperaban 4 y hay 3]
+[2026-11-03T18:50:33.897083700Z] | [LINEA 5] | [Cantidad de columnas incorrecta: se esperaban 4 y hay 3]
+[2026-11-03T18:51:01.179721700Z] | [LINEA 2] | [Conflicto de base de datos: Violación de indice de Unicidad ó Clave primaria: "PUBLIC.CONSTRAINT_INDEX_6 ON PUBLIC.PRODUCTOS(CODIGO_SKU NULLS FIRST) VALUES ( /* 1 */ 'SKU-100' )"
+Unique index or primary key violation: "PUBLIC.CONSTRAINT_INDEX_6 ON PUBLIC.PRODUCTOS(CODIGO_SKU NULLS FIRST) VALUES ( /* 1 */ 'SKU-100' )"; SQL statement:
+INSERT INTO productos (codigo_sku, descripcion, precio_unitario, stock_disponible) VALUES (?, ?, ?, ?) [23505-232]]
