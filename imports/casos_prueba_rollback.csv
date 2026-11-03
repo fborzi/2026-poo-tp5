@@ -1,0 +1,9 @@
+PRUEBA,CASO,LINEA,CONTENIDO_PROBADO,EJECUCION,RESULTADO
+
+1,Texto en numero,3,"SKU-101,Caja de carton mediana,abc,150",Individual,Rollback en linea 3 - 0 guardados
+
+2,Valor negativo,4,"SKU-102,Pallet de madera,15400.00,-30",Individual,Rollback en linea 4 - 0 guardados
+
+3,Faltan columnas,5,"SKU-103,Film stretch 50cm,7800.75",Individual,Rollback en linea 5 - 0 guardados
+
+4,SKU duplicado,2,"SKU-100,Cinta de embalar,1250.50,200",Individual,Commit 4 y rollback en linea 2
